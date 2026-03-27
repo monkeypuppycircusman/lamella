@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAMELLA — The Jaw Harp</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=DM+Mono:wght@300;400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&display=swap');
+
+:root {
+  --void:   #03020a;
+  --deep:   #07050c;
+  --murk:   #0c0810;
+  --fog:    #121018;
+  /* Iron / bone palette */
+  --iron0:  #d8d8e8;
+  --iron1:  #a8a8c0;
+  --iron2:  #787898;
+  --iron3:  #484868;
+  --iron4:  #282840;
+  --bone0:  #f0e8d8;
+  --bone1:  #d8c8a8;
+  --bone2:  #a89878;
+  --bone3:  #786848;
+  /* Mouth cavity warmth */
+  --mouth0: #ff8860;
+  --mouth1: #e06030;
+  --mouth2: #a03010;
+  --cavity: rgba(200,80,30,.18);
+  --reed:   rgba(200,190,230,.6);
+  --text:   #807888;
+  --text2:  #504858;
+  --text3:  #2a2438;
+  --mono:  'DM Mono', monospace;
+  --serif: 'Cormorant Garamond', serif;
+  --goth:  'UnifrakturMaguntia', cursive;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  background: var(--void);
+  overflow: hidden;
+  font-family: var(--mono);
+  cursor: none;
+}
+
+#cursor {
+  position: fixed; width: 22px; height: 22px;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%,-50%);
+}
+
+#bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+#app {
+  position: relative; width: 100vw; height: 100vh;
+  display: flex; flex-direction: column; z-index: 1;
+}
+
+/* ── HEADER ── */
+#hdr {
+  flex-shrink: 0; padding: 16px 28px 12px;
+  display: flex; align-items: baseline; gap: 18px;
+  border-bottom: 1px solid var(--text3);
+  background: linear-gradient(180deg, rgba(7,5,12,.97) 0%, transparent 100%);
+  position: relative; z-index: 2;
+}
+#logo {
+  font-family: var(--goth); font-size: 34px;
+  color: var(--iron1);
+  text-shadow: 0 0 18px rgba(168,168,192,.3), 0 0 50px rgba(120,120,152,.12);
+  letter-spacing: 5px; line-height: 1;
+}
+#logo-sub {
+  font-family: var(--serif); font-style: italic; font-size: 10px;
+  letter-spacing: 2px; color: var(--text3);
+}
+#hdr-stats { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.hstat { font-family: var(--mono); font-size: 9px; letter-spacing: 1px; color: var(--text3); text-transform: uppercase; }
+.hstat span { color: var(--text2); transition: color .1s; }
+.hstat span.lit-i { color: var(--iron0); text-shadow: 0 0 8px var(--iron2); }
+.hstat span.lit-m { color: var(--mouth0); text-shadow: 0 0 8px var(--mouth1); }
+.hstat span.lit-b { color: var(--bone0); text-shadow: 0 0 8px var(--bone2); }
+#power-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); transition: all .4s; }
+#power-dot.on { background: var(--iron1); box-shadow: 0 0 8px var(--iron1), 0 0 20px rgba(168,168,192,.4); }
+
+/* ── MAIN ── */
+#main { flex: 1; display: flex; overflow: hidden; position: relative; }
+#main::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(168,168,192,.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,168,192,.01) 1px, transparent 1px);
+  background-size: 58px 50px; pointer-events: none;
+}
+
+/* ── CENTER ── */
+#center {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start;
+  padding: 8px 16px 0; gap: 10px;
+  position: relative; z-index: 1; overflow: hidden;
+}
+
+/* ── JAW HARP SVG ── */
+#harp-section {
+  width: 100%; max-width: 760px; flex-shrink: 0;
+  height: 200px; position: relative;
+}
+#harp-svg { width: 100%; height: 100%; overflow: visible; }
+
+/* Reed pluck animation */
+#reed-line { transform-origin: 370px 90px; }
+.plucking #reed-line { animation: reedpluck .12s ease-out; }
+@keyframes reedpluck {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(8px) scaleX(1.02); }
+  40%  { transform: translateX(-5px); }
+  65%  { transform: translateX(3px); }
+  85%  { transform: translateX(-1.5px); }
+  100% { transform: translateX(0); }
+}
+
+/* Vibration shimmer on reed */
+.vibrating #reed-shimmer { animation: reedvib 0.03s linear infinite; }
+@keyframes reedvib {
+  0%,100% { transform: translateX(0); }
+  50%      { transform: translateX(2.5px); }
+}
+#reed-shimmer { pointer-events: none; }
+
+/* Mouth cavity glow when formant active */
+#mouth-cavity { transition: opacity .2s; }
+#mouth-heat { opacity: 0; pointer-events: none; transition: opacity .2s; }
+#mouth-heat.on { opacity: 1; }
+
+/* Formant waves from mouth */
+.formant-wave { pointer-events: none; animation: fwave .9s ease-out forwards; }
+@keyframes fwave {
+  0%   { opacity: .65; transform: scale(.5); }
+  100% { opacity: 0;   transform: scale(2.8); }
+}
+
+/* Body resonance ring */
+.body-ring { pointer-events: none; }
+.vibrating .body-ring { animation: bodyring 1.6s ease-in-out infinite; }
+@keyframes bodyring {
+  0%,100% { opacity: .15; }
+  50%      { opacity: .45; }
+}
+
+/* ── XY PAD: mouth cavity control ── */
+#xy-section {
+  width: 100%; max-width: 760px; flex-shrink: 0;
+  display: flex; gap: 10px; align-items: stretch;
+}
+#mouth-pad {
+  flex: 1; height: 80px;
+  border: 1px solid var(--text3); border-radius: 2px;
+  background: rgba(7,5,12,.8);
+  position: relative; overflow: hidden; cursor: crosshair;
+  touch-action: none;
+}
+#mouth-pad::before,#mouth-pad::after {
+  content:'';position:absolute;width:16px;height:16px;z-index:2;pointer-events:none;
+}
+#mouth-pad::before { top:0;left:0;border-top:1.5px solid var(--mouth0);border-left:1.5px solid var(--mouth0); }
+#mouth-pad::after  { bottom:0;right:0;border-bottom:1.5px solid var(--iron1);border-right:1.5px solid var(--iron1); }
+
+#xy-canvas { position:absolute;inset:0;width:100%;height:100%; }
+.xy-lbl { position:absolute;font-family:var(--mono);font-size:7px;letter-spacing:2px;text-transform:uppercase;color:rgba(168,168,192,.35);pointer-events:none;z-index:3; }
+#lbl-x0 { bottom:6px;left:10px; }
+#lbl-x1 { bottom:6px;right:10px; }
+#lbl-y0 { right:6px;bottom:20px;writing-mode:vertical-rl; }
+#lbl-y1 { right:6px;top:10px;writing-mode:vertical-rl; }
+
+#xy-thumb {
+  position:absolute;width:28px;height:28px;
+  transform:translate(-50%,-50%);pointer-events:none;
+}
+#xy-thumb svg { width:100%;height:100%; }
+
+/* Cavity display */
+#cavity-display {
+  width: 120px; flex-shrink: 0;
+  border: 1px solid var(--text3); border-radius: 2px;
+  background: rgba(7,5,12,.8);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px; padding: 8px;
+}
+#cavity-vowel {
+  font-family: var(--serif); font-style: italic; font-size: 32px;
+  color: var(--mouth0); text-shadow: 0 0 12px var(--mouth1);
+  line-height: 1;
+}
+#cavity-label {
+  font-family: var(--mono); font-size: 7px; letter-spacing: 2px;
+  color: var(--text3); text-transform: uppercase; text-align: center;
+}
+#cavity-freqs {
+  font-family: var(--mono); font-size: 8px; color: var(--text2);
+  letter-spacing: .5px; text-align: center; line-height: 1.6;
+}
+
+/* ── PLUCK PADS ── */
+#pluck-grid {
+  width: 100%; max-width: 760px; flex-shrink: 0;
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 6px;
+}
+.ppad {
+  border: 1px solid var(--text3); border-radius: 2px;
+  background: rgba(7,5,12,.7); cursor: pointer;
+  padding: 8px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: all .15s; user-select: none; position: relative; overflow: hidden;
+}
+.ppad::after { content:'';position:absolute;inset:0;opacity:0;transition:opacity .08s;pointer-events:none; }
+.ppad.t-iron::after { background: rgba(168,168,192,.07); }
+.ppad.t-mouth::after { background: rgba(200,80,30,.08); }
+.ppad.hit::after { opacity: 1; }
+.ppad.hold-on { border-color: rgba(168,168,192,.4); background: rgba(168,168,192,.03); }
+.ppad.hold-on.t-mouth { border-color: rgba(200,80,30,.4); background: rgba(200,80,30,.03); }
+.ppad.hit.t-iron  { border-color: rgba(168,168,192,.6); }
+.ppad.hit.t-mouth { border-color: rgba(200,80,30,.6); }
+.ppad-icon { font-size: 15px; filter: grayscale(.6) brightness(.6); transition: filter .1s; pointer-events: none; }
+.ppad.hit .ppad-icon, .ppad.hold-on .ppad-icon { filter: grayscale(0) brightness(1.1); }
+.ppad-name { font-family:var(--serif);font-style:italic;font-size:11px;color:var(--text2);pointer-events:none;text-align:center;line-height:1.2; }
+.ppad.t-iron.hit .ppad-name, .ppad.t-iron.hold-on .ppad-name { color: var(--iron0); }
+.ppad.t-mouth.hit .ppad-name, .ppad.t-mouth.hold-on .ppad-name { color: var(--mouth0); }
+.ppad-key { font-family:var(--mono);font-size:7px;color:var(--text3);pointer-events:none;letter-spacing:1px; }
+.hold-pip { position:absolute;top:5px;right:6px;width:4px;height:4px;border-radius:50%;background:var(--text3);transition:background .2s; }
+.ppad.hold-on .hold-pip { background: var(--iron1); box-shadow: 0 0 4px var(--iron1); }
+.ppad.hold-on.t-mouth .hold-pip { background: var(--mouth0); box-shadow: 0 0 4px var(--mouth1); }
+
+/* ── KEYBOARD ── */
+#kb-section { width:100%;max-width:760px;flex-shrink:0;position:relative; }
+#keyboard {
+  display:flex;height:78px;border:1px solid var(--text3);border-radius:0 0 3px 3px;
+  overflow:hidden;position:relative;background:linear-gradient(180deg,#080610 0%,#050408 100%);
+}
+.key{position:relative;cursor:pointer;flex-shrink:0;transition:background .04s;}
+.key.white{background:linear-gradient(180deg,#0e0c14 0%,#060410 100%);border-right:1px solid var(--text3);flex:1;z-index:1;}
+.key.white:hover{background:rgba(168,168,192,.05);}
+.key.white.active{background:linear-gradient(180deg,rgba(168,168,192,.4) 0%,rgba(72,72,104,.28) 100%) !important;box-shadow:inset 0 -2px 10px rgba(168,168,192,.2);}
+.key.black{background:linear-gradient(180deg,#04020c 0%,#080610 100%);position:absolute;width:60%;height:62%;top:0;z-index:2;border-radius:0 0 3px 3px;border:1px solid var(--text3);border-top:none;}
+.key.black:hover{background:rgba(200,80,30,.08);}
+.key.black.active{background:rgba(200,80,30,.2) !important;}
+.key-lbl{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:7px;color:var(--text3);pointer-events:none;user-select:none;}
+.key.active .key-lbl{color:rgba(168,168,192,.4);}
+
+#oct-outer{position:absolute;left:-46px;top:0;display:flex;flex-direction:column;align-items:center;gap:3px;}
+#oct-wheel{width:32px;height:78px;background:var(--void);border:1px solid var(--text3);border-radius:4px;overflow:hidden;cursor:ns-resize;position:relative;user-select:none;}
+#oct-wheel-inner{position:absolute;top:0;left:0;right:0;transition:transform .14s cubic-bezier(.22,.68,0,1.2);}
+.ow-slot{height:18px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;color:var(--text3);border-bottom:1px solid var(--text3);flex-shrink:0;}
+.ow-slot.cur{color:var(--iron1);background:rgba(168,168,192,.05);}
+#oct-wheel::before,#oct-wheel::after{content:'';position:absolute;left:0;right:0;height:12px;z-index:2;pointer-events:none;}
+#oct-wheel::before{top:0;background:linear-gradient(to bottom,var(--void),transparent);}
+#oct-wheel::after{bottom:0;background:linear-gradient(to top,var(--void),transparent);}
+#oct-lbl{font-family:var(--mono);font-size:7px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;}
+
+/* ── WAVEFORM ── */
+#wave-bar{flex-shrink:0;height:50px;background:var(--deep);border-top:1px solid var(--text3);position:relative;z-index:2;overflow:hidden;}
+#wave-canvas{width:100%;height:100%;display:block;}
+
+/* ── RIGHT PANEL ── */
+#panel{width:210px;flex-shrink:0;border-left:1px solid var(--text3);background:linear-gradient(180deg,rgba(7,5,12,.95) 0%,rgba(5,3,10,.98) 100%);display:flex;flex-direction:column;padding:16px 14px;gap:14px;overflow-y:auto;position:relative;z-index:5;}
+.psec{display:flex;flex-direction:column;gap:7px;}
+.ptitle{font-family:var(--mono);font-size:7px;letter-spacing:3px;text-transform:uppercase;color:rgba(168,168,192,.22);padding-bottom:5px;border-bottom:1px solid rgba(168,168,192,.05);}
+.pBtn{font-family:var(--serif);font-style:italic;font-size:12px;padding:5px 10px;border:1px solid rgba(168,168,192,.12);border-radius:2px;color:rgba(168,168,192,.3);background:transparent;cursor:pointer;transition:all .15s;text-align:left;}
+.pBtn:hover{color:var(--iron0);border-color:rgba(168,168,192,.38);}
+.pBtn.active{color:var(--iron0);border-color:var(--iron1);background:rgba(168,168,192,.05);text-shadow:0 0 8px rgba(168,168,192,.3);}
+.kg{display:flex;flex-direction:column;align-items:center;gap:3px;}
+canvas.knob{cursor:ns-resize;display:block;}
+.kl{font-family:var(--mono);font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(168,168,192,.2);}
+.kv{font-family:var(--mono);font-size:9px;color:rgba(168,168,192,.45);min-width:32px;text-align:center;}
+.knob-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+
+#note-display{margin-top:auto;padding-top:10px;border-top:1px solid rgba(168,168,192,.05);display:flex;flex-direction:column;align-items:center;gap:4px;}
+#disp-note{font-family:var(--goth);font-size:24px;letter-spacing:3px;color:var(--iron1);text-shadow:0 0 12px rgba(168,168,192,.3);line-height:1;}
+#disp-freq{font-family:var(--mono);font-size:9px;color:var(--text2);letter-spacing:1px;}
+#disp-lore{font-family:var(--serif);font-style:italic;font-size:11px;color:rgba(168,168,192,.28);text-align:center;line-height:1.55;max-width:170px;}
+
+#controls{flex-shrink:0;background:linear-gradient(0deg,rgba(5,3,10,.98) 0%,transparent 100%);border-top:1px solid var(--text3);padding:9px 22px 13px;display:flex;align-items:center;gap:16px;position:relative;z-index:2;flex-wrap:wrap;}
+.cdiv{width:1px;height:30px;background:var(--text3);flex-shrink:0;}
+::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+
+<!-- Cursor: plucking fingertip -->
+<div id="cursor">
+  <svg viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg">
+    <path d="M11 2 C11 2 15 5 15 10 C15 13 13 15 11 16 C9 15 7 13 7 10 C7 5 11 2 11 2 Z"
+      fill="rgba(168,168,192,.12)" stroke="rgba(168,168,192,.7)" stroke-width="1" stroke-linejoin="round"/>
+    <line x1="11" y1="16" x2="11" y2="21" stroke="rgba(168,168,192,.5)" stroke-width="1.4" stroke-linecap="round"/>
+    <line x1="7"  y1="17" x2="6"  y2="21" stroke="rgba(168,168,192,.3)" stroke-width="1" stroke-linecap="round"/>
+    <line x1="15" y1="17" x2="16" y2="21" stroke="rgba(168,168,192,.3)" stroke-width="1" stroke-linecap="round"/>
+    <circle cx="11" cy="9" r="1.5" fill="rgba(200,80,30,.6)"/>
+  </svg>
+</div>
+
+<canvas id="bg"></canvas>
+
+<div id="app">
+  <div id="hdr">
+    <div>
+      <div id="logo">Lamella</div>
+      <div id="logo-sub">The Jaw Harp · Body Cavity Resonator · Oldest Instrument · Everywhere Humans Have Been</div>
+    </div>
+    <div id="hdr-stats">
+      <div class="hstat">Reed <span id="hs-reed">—</span></div>
+      <div class="hstat">Mouth <span id="hs-mouth">—</span></div>
+      <div class="hstat">Cavity <span id="hs-cavity">still</span></div>
+      <div id="power-dot"></div>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="center">
+
+      <!-- JAW HARP SVG -->
+      <div id="harp-section">
+        <svg id="harp-svg" viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="iron-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="#484870"/>
+              <stop offset="25%"  stop-color="#9898c0"/>
+              <stop offset="55%"  stop-color="#d8d8f0"/>
+              <stop offset="80%"  stop-color="#a0a0c8"/>
+              <stop offset="100%" stop-color="#383858"/>
+            </linearGradient>
+            <linearGradient id="frame-grad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stop-color="#383848"/>
+              <stop offset="30%"  stop-color="#686888"/>
+              <stop offset="55%"  stop-color="#9090b8"/>
+              <stop offset="80%"  stop-color="#686878"/>
+              <stop offset="100%" stop-color="#303040"/>
+            </linearGradient>
+            <radialGradient id="mouth-cavity-grad" cx="50%" cy="40%" r="60%">
+              <stop offset="0%"   stop-color="rgba(200,80,30,.45)"/>
+              <stop offset="60%"  stop-color="rgba(160,50,15,.2)"/>
+              <stop offset="100%" stop-color="rgba(100,20,5,.0)"/>
+            </radialGradient>
+            <filter id="iron-glow">
+              <feGaussianBlur stdDeviation="2" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="reed-glow">
+              <feGaussianBlur stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="mouth-glow">
+              <feGaussianBlur stdDeviation="5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <!-- ══ TEETH / JAW SUGGESTION ══ -->
+          <!-- Upper jaw / teeth (behind the harp, held between) -->
+          <path d="M 100 72 L 640 72 L 640 80 Q 600 78 550 80 Q 500 78 450 80 Q 400 78 350 80 Q 300 78 250 80 Q 200 78 150 80 L 100 80 Z"
+            fill="rgba(240,236,224,.08)" stroke="rgba(240,236,224,.1)" stroke-width=".5"/>
+          <!-- Tooth shapes upper -->
+          <g fill="rgba(240,236,224,.07)" stroke="rgba(240,236,224,.08)" stroke-width=".4">
+            <rect x="150" y="66" width="18" height="14" rx="2"/>
+            <rect x="172" y="66" width="18" height="16" rx="2"/>
+            <rect x="194" y="66" width="18" height="15" rx="2"/>
+            <rect x="216" y="66" width="18" height="16" rx="2"/>
+            <rect x="238" y="66" width="18" height="14" rx="2"/>
+            <rect x="280" y="66" width="20" height="15" rx="2"/>
+            <rect x="304" y="66" width="20" height="16" rx="2"/>
+            <rect x="328" y="66" width="20" height="14" rx="2"/>
+            <rect x="352" y="66" width="20" height="16" rx="2"/>
+            <rect x="376" y="66" width="20" height="15" rx="2"/>
+            <rect x="420" y="66" width="18" height="14" rx="2"/>
+            <rect x="442" y="66" width="18" height="16" rx="2"/>
+            <rect x="464" y="66" width="18" height="15" rx="2"/>
+            <rect x="486" y="66" width="18" height="14" rx="2"/>
+            <rect x="508" y="66" width="18" height="16" rx="2"/>
+          </g>
+
+          <!-- Lower jaw -->
+          <path d="M 100 128 L 640 128 L 640 136 Q 550 134 450 136 Q 350 134 250 136 L 100 136 Z"
+            fill="rgba(240,236,224,.07)" stroke="rgba(240,236,224,.08)" stroke-width=".5"/>
+          <!-- Tooth shapes lower -->
+          <g fill="rgba(240,236,224,.06)" stroke="rgba(240,236,224,.07)" stroke-width=".4">
+            <rect x="155" y="128" width="17" height="13" rx="2"/>
+            <rect x="176" y="128" width="17" height="14" rx="2"/>
+            <rect x="197" y="128" width="17" height="13" rx="2"/>
+            <rect x="218" y="128" width="17" height="14" rx="2"/>
+            <rect x="282" y="128" width="19" height="13" rx="2"/>
+            <rect x="305" y="128" width="19" height="14" rx="2"/>
+            <rect x="328" y="128" width="19" height="13" rx="2"/>
+            <rect x="351" y="128" width="19" height="14" rx="2"/>
+            <rect x="374" y="128" width="19" height="13" rx="2"/>
+            <rect x="425" y="128" width="17" height="14" rx="2"/>
+            <rect x="446" y="128" width="17" height="13" rx="2"/>
+            <rect x="467" y="128" width="17" height="14" rx="2"/>
+            <rect x="488" y="128" width="17" height="13" rx="2"/>
+          </g>
+
+          <!-- ══ MOUTH CAVITY GLOW ══ -->
+          <ellipse id="mouth-cavity" cx="380" cy="100" rx="260" ry="40"
+            fill="url(#mouth-cavity-grad)" opacity=".4"
+            filter="url(#mouth-glow)"/>
+          <ellipse id="mouth-heat" cx="380" cy="100" rx="220" ry="32"
+            fill="rgba(220,100,40,.25)" opacity="0"
+            filter="url(#mouth-glow)"/>
+
+          <!-- ══ FORMANT WAVES (from mouth cavity) ══ -->
+          <g id="formant-waves"></g>
+
+          <!-- ══ JAW HARP FRAME ══ -->
+          <!-- The frame is a horseshoe/lyre shape pressed against the teeth -->
+          <!-- Left prong -->
+          <path d="M 345 60 L 345 140 Q 345 155 362 155 L 370 155"
+            fill="none" stroke="url(#frame-grad)" stroke-width="10" stroke-linecap="round"
+            filter="url(#iron-glow)"/>
+          <!-- Right prong -->
+          <path d="M 395 60 L 395 140 Q 395 155 378 155 L 370 155"
+            fill="none" stroke="url(#frame-grad)" stroke-width="10" stroke-linecap="round"
+            filter="url(#iron-glow)"/>
+          <!-- Frame top bridge (connects to handle, goes off right) -->
+          <path d="M 345 60 Q 360 50 370 50 Q 380 50 395 60"
+            fill="none" stroke="url(#frame-grad)" stroke-width="11" stroke-linecap="round"/>
+          <!-- Handle -->
+          <path d="M 370 50 L 700 50 Q 720 50 720 70 Q 720 90 700 90 L 370 82"
+            fill="none" stroke="url(#frame-grad)" stroke-width="12" stroke-linecap="round"/>
+          <!-- Handle grip wrapping -->
+          <g stroke="rgba(100,80,40,.5)" stroke-width="1" fill="none" stroke-linecap="round">
+            <line x1="560" y1="48" x2="560" y2="92"/>
+            <line x1="575" y1="48" x2="575" y2="92"/>
+            <line x1="590" y1="48" x2="590" y2="92"/>
+            <line x1="605" y1="48" x2="605" y2="92"/>
+            <line x1="620" y1="49" x2="620" y2="91"/>
+            <line x1="635" y1="49" x2="635" y2="91"/>
+          </g>
+          <!-- Handle highlight -->
+          <path d="M 400 52 L 680 52 Q 700 52 710 62"
+            fill="none" stroke="rgba(220,220,240,.2)" stroke-width="3" stroke-linecap="round"/>
+
+          <!-- Frame highlights -->
+          <path d="M 348 63 L 348 138" fill="none" stroke="rgba(220,220,240,.18)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M 392 63 L 392 138" fill="none" stroke="rgba(220,220,240,.15)" stroke-width="2" stroke-linecap="round"/>
+
+          <!-- Frame prong end ornaments (rivet heads) -->
+          <circle cx="345" cy="60" r="5" fill="url(#iron-grad)" stroke="rgba(168,168,192,.4)" stroke-width=".8"/>
+          <circle cx="395" cy="60" r="5" fill="url(#iron-grad)" stroke="rgba(168,168,192,.4)" stroke-width=".8"/>
+          <!-- Frame bottom bight (U-shape bottom) -->
+          <circle cx="370" cy="155" r="7" fill="url(#iron-grad)" stroke="rgba(168,168,192,.3)" stroke-width="1"/>
+
+          <!-- ══ REED / LAMELLA ══ -->
+          <!-- The reed — the tongue that vibrates inside the frame -->
+          <!-- It goes from the frame bridge toward the tip between the prongs -->
+          <g id="reed-shimmer">
+            <line id="reed-line"
+              x1="370" y1="55" x2="370" y2="148"
+              stroke="url(#iron-grad)" stroke-width="4" stroke-linecap="round"
+              filter="url(#reed-glow)"/>
+            <!-- Reed highlight -->
+            <line x1="368.5" y1="58" x2="368.5" y2="145"
+              stroke="rgba(220,220,240,.25)" stroke-width="1.2" stroke-linecap="round"/>
+            <!-- Reed tip (the part you pluck) -->
+            <ellipse cx="370" cy="148" rx="4" ry="2.5"
+              fill="rgba(200,200,224,.6)" stroke="rgba(168,168,192,.5)" stroke-width=".8"/>
+          </g>
+
+          <!-- Reed pluck point indicator -->
+          <circle id="pluck-indicator" cx="370" cy="148" r="8"
+            fill="rgba(200,80,30,.0)" stroke="rgba(200,80,30,.0)"/>
+
+          <!-- ══ BODY RESONANCE RING ══ (the whole body resonates) -->
+          <ellipse class="body-ring" cx="380" cy="100" rx="300" ry="70"
+            fill="none" stroke="rgba(168,168,192,.15)" stroke-width="1" stroke-dasharray="4,6"/>
+
+          <!-- Instrument scale label -->
+          <text x="570" y="170" font-family="'Cormorant Garamond',serif" font-style="italic"
+            font-size="9" fill="rgba(168,168,192,.2)" text-anchor="middle" letter-spacing="2">
+            Lamella · Iron Reed · Body Cavity Resonator
+          </text>
+
+        </svg>
+      </div>
+
+      <!-- XY PAD: mouth cavity control -->
+      <div id="xy-section">
+        <div id="mouth-pad">
+          <canvas id="xy-canvas"></canvas>
+          <div class="xy-lbl" id="lbl-x0">Jaw Down</div>
+          <div class="xy-lbl" id="lbl-x1">Jaw Up</div>
+          <div class="xy-lbl" id="lbl-y0">Throat</div>
+          <div class="xy-lbl" id="lbl-y1">Nasal</div>
+          <div id="xy-thumb">
+            <svg viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="14" cy="14" r="8" fill="rgba(200,80,30,.15)" stroke="rgba(200,80,30,.7)" stroke-width="1.2"/>
+              <circle cx="14" cy="14" r="3" fill="rgba(200,80,30,.6)"/>
+              <line x1="14" y1="0"  x2="14" y2="7"  stroke="rgba(168,168,192,.5)" stroke-width="1"/>
+              <line x1="14" y1="21" x2="14" y2="28" stroke="rgba(168,168,192,.5)" stroke-width="1"/>
+              <line x1="0"  y1="14" x2="7"  y2="14" stroke="rgba(168,168,192,.5)" stroke-width="1"/>
+              <line x1="21" y1="14" x2="28" y2="14" stroke="rgba(168,168,192,.5)" stroke-width="1"/>
+            </svg>
+          </div>
+        </div>
+        <div id="cavity-display">
+          <div id="cavity-vowel">ah</div>
+          <div id="cavity-label">Mouth Shape</div>
+          <div id="cavity-freqs">F1: —<br>F2: —</div>
+        </div>
+      </div>
+
+      <!-- PLUCK PADS -->
+      <div id="pluck-grid">
+        <div class="ppad t-iron" data-sound="single"     data-key="q"><div class="ppad-icon">🎵</div><div class="ppad-name">Single Pluck</div><div class="ppad-key">Q</div></div>
+        <div class="ppad t-iron" data-sound="roll"       data-key="w"><div class="ppad-icon">🥁</div><div class="ppad-name">Reed Roll</div><div class="ppad-key">W</div></div>
+        <div class="ppad t-mouth" data-sound="throat"    data-key="e" data-hold="1"><div class="hold-pip"></div><div class="ppad-icon">💨</div><div class="ppad-name">Throat Drone</div><div class="ppad-key">E</div></div>
+        <div class="ppad t-iron" data-sound="overtone"   data-key="r"><div class="ppad-icon">🌀</div><div class="ppad-name">Overtone Climb</div><div class="ppad-key">R</div></div>
+        <div class="ppad t-mouth" data-sound="vowel-sweep" data-key="a"><div class="ppad-icon">👄</div><div class="ppad-name">Vowel Sweep</div><div class="ppad-key">A</div></div>
+        <div class="ppad t-iron" data-sound="tremolo"    data-key="s"><div class="ppad-icon">〰</div><div class="ppad-name">Tremolo</div><div class="ppad-key">S</div></div>
+        <div class="ppad t-mouth" data-sound="nasal"     data-key="d" data-hold="1"><div class="hold-pip"></div><div class="ppad-icon">🫁</div><div class="ppad-name">Nasal Cavity</div><div class="ppad-key">D</div></div>
+        <div class="ppad t-iron" data-sound="ritual"     data-key="f" data-hold="1"><div class="hold-pip"></div><div class="ppad-icon">🔮</div><div class="ppad-name">Ritual Pattern</div><div class="ppad-key">F</div></div>
+      </div>
+
+      <!-- KEYBOARD -->
+      <div id="kb-section" style="position:relative;">
+        <div id="oct-outer">
+          <div id="oct-wheel"><div id="oct-wheel-inner"></div></div>
+          <div id="oct-lbl">Oct</div>
+        </div>
+        <div id="keyboard"></div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div id="panel">
+      <div class="psec">
+        <div class="ptitle">✦ Reed</div>
+        <button class="pBtn active" data-reed="iron">Forged Iron</button>
+        <button class="pBtn" data-reed="bone">Bone Reed</button>
+        <button class="pBtn" data-reed="bamboo">Bamboo</button>
+        <button class="pBtn" data-reed="brass">Brass</button>
+      </div>
+      <div class="psec">
+        <div class="ptitle">✦ Cavity</div>
+        <div class="knob-row">
+          <div class="kg">
+            <canvas class="knob" id="k-reverb"  width="44" height="44" data-min="0"   data-max="1"   data-val="0.55" data-color="#a8a8c0"></canvas>
+            <div class="kl">Hall</div><div class="kv" id="v-reverb">0.55</div>
+          </div>
+          <div class="kg">
+            <canvas class="knob" id="k-cavity"  width="44" height="44" data-min="0"   data-max="1"   data-val="0.65" data-color="#e06030"></canvas>
+            <div class="kl">Cavity</div><div class="kv" id="v-cavity">0.65</div>
+          </div>
+        </div>
+        <div class="knob-row">
+          <div class="kg">
+            <canvas class="knob" id="k-decay"   width="44" height="44" data-min="0.1" data-max="5"   data-val="1.8"  data-color="#787898"></canvas>
+            <div class="kl">Ring</div><div class="kv" id="v-decay">1.80</div>
+          </div>
+          <div class="kg">
+            <canvas class="knob" id="k-jaw"     width="44" height="44" data-min="0"   data-max="1"   data-val="0.5"  data-color="#c03010"></canvas>
+            <div class="kl">Jaw</div><div class="kv" id="v-jaw">0.50</div>
+          </div>
+        </div>
+      </div>
+      <div class="psec">
+        <div class="ptitle">✦ Tone</div>
+        <div class="knob-row">
+          <div class="kg">
+            <canvas class="knob" id="k-bright"  width="44" height="44" data-min="0"   data-max="1"   data-val="0.5"  data-color="#d8d8e8"></canvas>
+            <div class="kl">Bright</div><div class="kv" id="v-bright">0.50</div>
+          </div>
+          <div class="kg">
+            <canvas class="knob" id="k-sub"     width="44" height="44" data-min="0"   data-max="1"   data-val="0.4"  data-color="#484868"></canvas>
+            <div class="kl">Sub</div><div class="kv" id="v-sub">0.40</div>
+          </div>
+        </div>
+      </div>
+      <div id="note-display">
+        <div id="disp-note">—</div>
+        <div id="disp-freq">— Hz</div>
+        <div id="disp-lore">hold it between<br>the teeth<br>your skull is<br>the instrument</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="wave-bar"><canvas id="wave-canvas"></canvas></div>
+
+  <div id="controls">
+    <div class="kg">
+      <canvas class="knob" id="k-overtone" width="38" height="38" data-min="0" data-max="1" data-val="0.5" data-color="#a8a8c0"></canvas>
+      <div class="kl">Overtone</div><div class="kv" id="v-overtone">0.50</div>
+    </div>
+    <div class="kg">
+      <canvas class="knob" id="k-growl"   width="38" height="38" data-min="0" data-max="1" data-val="0.3" data-color="#787898"></canvas>
+      <div class="kl">Growl</div><div class="kv" id="v-growl">0.30</div>
+    </div>
+    <div class="kg">
+      <canvas class="knob" id="k-width"   width="38" height="38" data-min="0" data-max="1" data-val="0.45" data-color="#d8d8e8"></canvas>
+      <div class="kl">Width</div><div class="kv" id="v-width">0.45</div>
+    </div>
+    <div class="cdiv"></div>
+    <div style="font-family:var(--serif);font-style:italic;font-size:11px;color:rgba(168,168,192,.25);letter-spacing:.5px;line-height:1.6;">
+      found in siberia<br>found everywhere
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// LAMELLA — The Jaw Harp
+//
+// The jaw harp (Jew's harp, mouth harp, guimbarde) works by
+// pressing a frame against the teeth, plucking a reed, and
+// using the mouth as a resonant cavity.
+//
+// The reed produces a complex buzzing tone rich in harmonics.
+// The mouth cavity acts as a bandpass filter — by changing
+// mouth shape (jaw height = F1, tongue front/back = F2)
+// the player selects which harmonic to emphasize.
+// This is fundamentally the same physics as the human voice:
+// formant filtering of a buzzing source.
+//
+// The instrument has been found in Siberia (5000 years old),
+// in medieval Europe, India, Southeast Asia, Polynesia.
+// It exists everywhere humans have been.
+// ══════════════════════════════════════════════════════════════
+
+let actx=null, convolver=null, analyser=null;
+const activeVoices=new Map();
+const holdNodes=new Map();
+
+// XY state: controls mouth cavity formants in real time
+let xyActive=false;
+let xyX=0.5, xyY=0.4; // X=jaw/F1, Y=nasal/F2
+
+function getCtx(){
+  if(!actx) actx=new(window.AudioContext||window.webkitAudioContext)();
+  if(actx.state==='suspended') actx.resume();
+  if(!convolver) buildReverb();
+  if(!analyser){ analyser=actx.createAnalyser(); analyser.fftSize=512; analyser.connect(actx.destination); }
+  return actx;
+}
+
+const P={reverb:.55,cavity:.65,decay:1.8,jaw:.5,bright:.5,sub:.4,overtone:.5,growl:.3,width:.45,reed:'iron'};
+const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function midiToFreq(n){ return 440*Math.pow(2,(n-69)/12); }
+function midiName(n)  { return NOTE_NAMES[n%12]+(Math.floor(n/12)-1); }
+
+// ── Formant frequencies mapped from XY position ──
+// X axis: jaw height — controls F1 (vowel openness)
+//   left = jaw down/open = high F1 (AH ~800Hz)
+//   right = jaw up/closed = low F1 (OO ~300Hz)
+// Y axis: tongue position — controls F2
+//   bottom = tongue back (throat) = low F2 (OO ~870Hz)
+//   top = tongue front (nasal/EE) = high F2 (EE ~2300Hz)
+function getFormants(){
+  // F1: jaw openness — left=open(high F1), right=closed(low F1)
+  const f1 = 300 + (1-xyX)*500;   // 300–800 Hz
+  // F2: tongue position — bottom=back(low F2), top=front(high F2)
+  const f2 = 870 + xyY*1430;      // 870–2300 Hz
+  return{f1,f2};
+}
+
+// Determine vowel name from formant position
+function getVowelName(){
+  const {f1,f2}=getFormants();
+  // Classify by F1/F2 ranges
+  if(f1<380 && f2<1100) return 'oo';
+  if(f1<380 && f2>1800) return 'ee';
+  if(f1>650 && f2<1400) return 'ah';
+  if(f1>500 && f2>1600) return 'eh';
+  if(f1<480 && f2>900 && f2<1500) return 'oh';
+  if(f2>1900) return 'ee';
+  return 'ah';
+}
+
+const LORE=[
+  'hold it between\nthe teeth\nyour skull is\nthe instrument',
+  'change the shape\nof your mouth\nto change the note',
+  'found in siberia\n5000 years old',
+  'the oldest harmonic\ninstrument known',
+  'the mouth shapes\nthe overtone',
+  'everywhere humans\nhave ever been',
+];
+
+// ── Reverb: small stone room, intimate ──
+function buildReverb(){
+  const c=actx,dur=2.5,len=c.sampleRate*dur,buf=c.createBuffer(2,len,c.sampleRate);
+  for(let ch=0;ch<2;ch++){
+    const d=buf.getChannelData(ch);
+    for(let i=0;i<len;i++){
+      const env=Math.pow(1-i/len,2.5)*(0.7+0.3*Math.sin(i*.0004));
+      d[i]=(Math.random()*2-1)*env;
+      if(i<c.sampleRate*.04&&Math.random()<.006) d[i]+=(Math.random()*2-1)*.5;
+    }
+  }
+  if(convolver)try{convolver.disconnect()}catch(e){}
+  convolver=c.createConvolver(); convolver.buffer=buf;
+  convolver.connect(c.destination);
+}
+
+function routeOut(c,node){
+  const dry=c.createGain(); dry.gain.value=1-P.reverb*.85;
+  const wet=c.createGain(); wet.gain.value=P.reverb*.85;
+  node.connect(dry); dry.connect(analyser);
+  node.connect(wet); wet.connect(convolver);
+  return{dry,wet};
+}
+
+// ══════════════════════════════════════════════════════════════
+// JAW HARP VOICE SYNTHESIS
+//
+// The jaw harp reed is clamped at one end and free at the other.
+// When plucked it vibrates at a frequency determined by its mass
+// and stiffness — the fundamental note of the instrument.
+// The player CANNOT change this note. What they CAN change is
+// which overtone is amplified by the mouth cavity.
+//
+// The reed produces: fundamental + all integer harmonics
+// (it's very similar to a sawtooth wave in spectral content)
+// The mouth cavity: two bandpass filters (F1, F2) that
+// selectively amplify specific harmonics from the series.
+//
+// This is how all formant-based sound works — voice, sitar,
+// didgeridoo — a complex source filtered by a cavity.
+// ══════════════════════════════════════════════════════════════
+function pluck(noteNum, vel=0.75, isHeld=false){
+  const c=getCtx();
+  const freq=midiToFreq(noteNum);
+  const now=c.currentTime;
+  const key=`pluck-${noteNum}`;
+  const {f1,f2}=getFormants();
+
+  if(!isHeld && activeVoices.has(key)){
+    const prev=activeVoices.get(key);
+    prev.master.gain.setTargetAtTime(0,now,.08);
+    setTimeout(()=>prev.nodes.forEach(n=>{try{n.stop()}catch(e){}}),1500);
+    activeVoices.delete(key);
+  }
+
+  const nodes=[],master=c.createGain();
+
+  // ── REED SOURCE: rich harmonic content ──
+  // Reed material changes the spectral tilt and decay
+  let oscType, harmShift, decayMult;
+  switch(P.reed){
+    case 'iron':   oscType='sawtooth'; harmShift=1.0;  decayMult=1.0;  break;
+    case 'bone':   oscType='triangle'; harmShift=0.92; decayMult=0.85; break;
+    case 'bamboo': oscType='sawtooth'; harmShift=1.08; decayMult=0.7;  break;
+    case 'brass':  oscType='sawtooth'; harmShift=1.02; decayMult=1.3;  break;
+  }
+
+  // Main reed oscillator
+  const reed=c.createOscillator(); reed.type=oscType;
+  reed.frequency.value=freq*harmShift;
+  // Natural pitch wobble (not a perfect reed)
+  const wobble=c.createOscillator(); wobble.frequency.value=3.5+Math.random()*.8;
+  const wobG=c.createGain(); wobG.gain.value=freq*.012;
+  wobble.connect(wobG); wobG.connect(reed.frequency);
+  wobble.start(now); nodes.push(wobble);
+
+  // Growl: subharmonic buzzing from throat/chest coupling
+  if(P.growl>.02){
+    const growl=c.createOscillator(); growl.type='sawtooth';
+    growl.frequency.value=freq*.5*harmShift;
+    const gLFO=c.createOscillator(); gLFO.frequency.value=18+P.growl*20;
+    const gLG=c.createGain(); gLG.gain.value=12;
+    gLFO.connect(gLG); gLG.connect(growl.detune);
+    const gG=c.createGain(); gG.gain.value=vel*P.growl*.3;
+    growl.connect(gG); gG.connect(master);
+    growl.start(now); gLFO.start(now); nodes.push(growl,gLFO);
+  }
+
+  reed.start(now); nodes.push(reed);
+
+  // ── MOUTH CAVITY: the formant filter bank ──
+  // This is the whole instrument — without this it's just a buzz
+  // The cavity resonates at F1 and F2 determined by XY pad
+
+  // F1 — jaw height
+  const bpf1=c.createBiquadFilter(); bpf1.type='bandpass';
+  bpf1.frequency.value=f1; bpf1.Q.value=4+P.cavity*8;
+
+  // F2 — tongue position
+  const bpf2=c.createBiquadFilter(); bpf2.type='bandpass';
+  bpf2.frequency.value=f2; bpf2.Q.value=6+P.cavity*10;
+
+  // Cavity resonance (the skull bones themselves)
+  const bpf3=c.createBiquadFilter(); bpf3.type='bandpass';
+  bpf3.frequency.value=freq*Math.round(f1/freq)+freq*.5; // nearest harmonic to F1
+  bpf3.Q.value=12*P.cavity;
+
+  // Mix the filtered outputs
+  const cavityMix=c.createGain(); cavityMix.gain.value=0;
+
+  const g1=c.createGain(); g1.gain.value=P.cavity*.7;
+  const g2=c.createGain(); g2.gain.value=P.cavity*.5;
+  const g3=c.createGain(); g3.gain.value=P.cavity*.35;
+
+  reed.connect(bpf1); bpf1.connect(g1); g1.connect(cavityMix);
+  reed.connect(bpf2); bpf2.connect(g2); g2.connect(cavityMix);
+  reed.connect(bpf3); bpf3.connect(g3); g3.connect(cavityMix);
+
+  // Dry reed (bypasses cavity — the metallic click you hear regardless)
+  const dryReed=c.createGain(); dryReed.gain.value=(1-P.cavity)*.4;
+  const dryLpf=c.createBiquadFilter(); dryLpf.type='lowpass';
+  dryLpf.frequency.value=200+P.bright*1800;
+  reed.connect(dryLpf); dryLpf.connect(dryReed); dryReed.connect(master);
+
+  // ── PLUCK ENVELOPE ──
+  // Fast attack (percussion), exponential decay (the ring-down)
+  const reedEnv=c.createGain(); reedEnv.gain.value=0;
+  reedEnv.gain.setValueAtTime(vel*.85,now+.001);
+  reedEnv.gain.exponentialRampToValueAtTime(.001, now+P.decay*decayMult);
+  cavityMix.connect(reedEnv); reedEnv.connect(master);
+
+  // Cavity envelope: slightly slower onset than reed attack
+  // (the mouth takes a moment to shape the sound)
+  cavityMix.gain.setValueAtTime(0,now);
+  cavityMix.gain.linearRampToValueAtTime(1,now+.012);
+
+  // ── OVERTONE SHIMMER ──
+  // The high partials that shimmer from the body cavity walls
+  if(P.overtone>.02){
+    [3,5,7,9].forEach((h,i)=>{
+      const ov=c.createOscillator(); ov.type='sine';
+      ov.frequency.value=freq*h*harmShift*(1+(Math.random()-.5)*.008);
+      const ovBpf=c.createBiquadFilter(); ovBpf.type='bandpass';
+      ovBpf.frequency.value=freq*h; ovBpf.Q.value=8;
+      const ovG=c.createGain();
+      ovG.gain.setValueAtTime(vel*P.overtone*(.14-i*.025),now+.002);
+      ovG.gain.exponentialRampToValueAtTime(.001,now+P.decay*.4*(1-i*.08));
+      ov.connect(ovBpf); ovBpf.connect(ovG); ovG.connect(master);
+      ov.start(now); ov.stop(now+P.decay*.45); nodes.push(ov);
+    });
+  }
+
+  // ── PLUCK TRANSIENT ──
+  // The sharp metallic click of the pluck
+  const tLen=Math.floor(c.sampleRate*.018);
+  const tBuf=c.createBuffer(1,tLen,c.sampleRate);
+  const td=tBuf.getChannelData(0);
+  for(let i=0;i<tLen;i++) td[i]=(Math.random()*2-1)*Math.exp(-i/(c.sampleRate*.003));
+  const ts=c.createBufferSource(); ts.buffer=tBuf;
+  const tBpf=c.createBiquadFilter(); tBpf.type='bandpass';
+  tBpf.frequency.value=2000+P.bright*3000; tBpf.Q.value=2;
+  const tG=c.createGain(); tG.gain.value=vel*.55;
+  ts.connect(tBpf); tBpf.connect(tG); tG.connect(master);
+  ts.start(now); ts.stop(now+.02); nodes.push(ts);
+
+  // ── SUB ──
+  if(P.sub>.02){
+    const sub=c.createOscillator(); sub.type='sine'; sub.frequency.value=freq*.5*harmShift;
+    const sG=c.createGain();
+    sG.gain.setValueAtTime(vel*P.sub*.35,now+.001);
+    sG.gain.exponentialRampToValueAtTime(.001,now+P.decay*.55*decayMult);
+    sub.connect(sG); sG.connect(master);
+    sub.start(now); sub.stop(now+P.decay*.6*decayMult); nodes.push(sub);
+  }
+
+  // ── SPATIAL WIDTH ──
+  if(P.width>.02){
+    const dl=c.createDelay(.04); dl.delayTime.value=.022;
+    const cl=c.createOscillator(); cl.frequency.value=.28;
+    const cg=c.createGain(); cg.gain.value=.005*P.width;
+    cl.connect(cg); cg.connect(dl.delayTime);
+    const cm=c.createGain(); cm.gain.value=P.width*.4;
+    master.connect(dl); dl.connect(cm); cm.connect(master);
+    cl.start(now); nodes.push(cl);
+  }
+
+  // ── TONE FILTER ──
+  const lpf=c.createBiquadFilter(); lpf.type='lowpass';
+  lpf.frequency.value=300+P.bright*6000; lpf.Q.value=.8;
+  master.connect(lpf);
+
+  const r=routeOut(c,lpf);
+  reed.stop(now+P.decay*decayMult+.3);
+
+  const voiceData={master,lpf,nodes,bpf1,bpf2,...r,freq};
+  activeVoices.set(key,voiceData);
+  updateDisplay(noteNum,freq,f1,f2);
+  animateHarp();
+  addFormantWaves(f1,f2);
+  document.getElementById('power-dot').classList.add('on');
+  document.getElementById('hs-cavity').textContent='resonating';
+  document.getElementById('hs-cavity').className='lit-m';
+
+  clearTimeout(window._cavT);
+  window._cavT=setTimeout(()=>{
+    activeVoices.delete(key);
+    if(activeVoices.size===0&&holdNodes.size===0){
+      document.getElementById('harp-svg').classList.remove('plucking','vibrating');
+      document.getElementById('power-dot').classList.remove('on');
+      document.getElementById('hs-cavity').textContent='still';
+      document.getElementById('hs-cavity').className='';
+      document.getElementById('mouth-heat').classList.remove('on');
+    }
+  },(P.decay+.4)*1000);
+
+  return voiceData;
+}
+
+function animateHarp(){
+  const svg=document.getElementById('harp-svg');
+  svg.classList.remove('plucking','vibrating');
+  void svg.offsetWidth;
+  svg.classList.add('plucking');
+  setTimeout(()=>{svg.classList.remove('plucking');svg.classList.add('vibrating');},120);
+  document.getElementById('mouth-heat').classList.add('on');
+}
+
+function addFormantWaves(f1,f2){
+  const g=document.getElementById('formant-waves');
+  // Two wave sets — one for each formant, at slightly different scales
+  [[f1,260],[f2,340]].forEach(([f,ry],fi)=>{
+    for(let w=0;w<2;w++){
+      const el=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+      el.setAttribute('cx','380'); el.setAttribute('cy','100');
+      el.setAttribute('rx',150+fi*60); el.setAttribute('ry',ry/8+20);
+      el.setAttribute('fill','none');
+      el.setAttribute('stroke',fi===0?'rgba(200,80,30,.45)':'rgba(168,168,192,.3)');
+      el.setAttribute('stroke-width',fi===0?'1.2':'0.8');
+      el.setAttribute('class','formant-wave');
+      el.style.animationDelay=(w*.2+fi*.1)+'s';
+      el.style.transformOrigin='380px 100px';
+      g.appendChild(el);
+      setTimeout(()=>el.remove(),1200);
+    }
+  });
+}
+
+function updateDisplay(noteNum,freq,f1,f2){
+  const name=NOTE_NAMES[noteNum%12];
+  document.getElementById('disp-note').textContent=name;
+  document.getElementById('disp-freq').textContent=Math.round(freq)+' Hz';
+  document.getElementById('hs-reed').textContent=name+(Math.floor(noteNum/12)-1);
+  document.getElementById('hs-mouth').textContent=getVowelName();
+  ['hs-reed'].forEach(id=>{const el=document.getElementById(id);el.className='lit-i';clearTimeout(el._t);el._t=setTimeout(()=>el.className='',500);});
+  document.getElementById('hs-mouth').className='lit-m';
+  clearTimeout(window._mouthT);window._mouthT=setTimeout(()=>document.getElementById('hs-mouth').className='',600);
+  document.getElementById('disp-lore').innerHTML=LORE[Math.floor(Math.random()*LORE.length)].replace(/\n/g,'<br>');
+}
+
+function updateXYDisplay(){
+  const {f1,f2}=getFormants();
+  const vowel=getVowelName();
+  document.getElementById('cavity-vowel').textContent=vowel;
+  document.getElementById('cavity-freqs').textContent=`F1: ${Math.round(f1)}Hz\nF2: ${Math.round(f2)}Hz`;
+  document.getElementById('hs-mouth').textContent=vowel;
+  // Update active voice formants in real time
+  activeVoices.forEach(v=>{
+    if(v.bpf1&&actx){ v.bpf1.frequency.setTargetAtTime(f1,actx.currentTime,.04); }
+    if(v.bpf2&&actx){ v.bpf2.frequency.setTargetAtTime(f2,actx.currentTime,.04); }
+  });
+}
+
+// ── XY Pad ──
+const xyCanvas=document.getElementById('xy-canvas');
+const xCtx=xyCanvas.getContext('2d');
+let xyTrail=[];
+
+function resizeXY(){ xyCanvas.width=xyCanvas.offsetWidth; xyCanvas.height=xyCanvas.offsetHeight; }
+
+function updateXY(x,y){
+  const rect=document.getElementById('mouth-pad').getBoundingClientRect();
+  xyX=Math.max(0,Math.min(1,(x-rect.left)/rect.width));
+  xyY=Math.max(0,Math.min(1,1-(y-rect.top)/rect.height)); // invert Y
+  // Move thumb
+  document.getElementById('xy-thumb').style.left=(xyX*100)+'%';
+  document.getElementById('xy-thumb').style.top=((1-xyY)*100)+'%';
+  xyTrail.push({x:xyX*xyCanvas.width,y:(1-xyY)*xyCanvas.height,t:Date.now()});
+  if(xyTrail.length>50)xyTrail.shift();
+  updateXYDisplay();
+  P.jaw=xyX;
+}
+
+const mouthPad=document.getElementById('mouth-pad');
+mouthPad.addEventListener('mousedown',e=>{xyActive=true;getCtx();updateXY(e.clientX,e.clientY);e.preventDefault();});
+window.addEventListener('mousemove',e=>{if(xyActive)updateXY(e.clientX,e.clientY);});
+window.addEventListener('mouseup',()=>{xyActive=false;});
+mouthPad.addEventListener('touchstart',e=>{xyActive=true;getCtx();updateXY(e.touches[0].clientX,e.touches[0].clientY);e.preventDefault();},{passive:false});
+window.addEventListener('touchmove',e=>{if(xyActive)updateXY(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+window.addEventListener('touchend',()=>{xyActive=false;});
+
+// Set initial thumb position
+document.getElementById('xy-thumb').style.left=(xyX*100)+'%';
+document.getElementById('xy-thumb').style.top=((1-xyY)*100)+'%';
+
+function drawXYCanvas(){
+  requestAnimationFrame(drawXYCanvas);
+  const W=xyCanvas.width,H=xyCanvas.height;
+  xCtx.clearRect(0,0,W,H);
+  // Grid
+  xCtx.strokeStyle='rgba(168,168,192,.06)';xCtx.lineWidth=.6;
+  for(let i=1;i<4;i++){
+    xCtx.beginPath();xCtx.moveTo(i*W/4,0);xCtx.lineTo(i*W/4,H);xCtx.stroke();
+    xCtx.beginPath();xCtx.moveTo(0,i*H/4);xCtx.lineTo(W,i*H/4);xCtx.stroke();
+  }
+  // Trail
+  const now=Date.now();
+  for(let i=1;i<xyTrail.length;i++){
+    const p0=xyTrail[i-1],p1=xyTrail[i];
+    const age=(now-p1.t)/1200;if(age>1)continue;
+    const a=(1-age)*0.5;
+    xCtx.beginPath();xCtx.moveTo(p0.x,p0.y);xCtx.lineTo(p1.x,p1.y);
+    xCtx.strokeStyle=`rgba(200,80,30,${a})`;xCtx.lineWidth=1.5*(1-age);xCtx.lineCap='round';xCtx.stroke();
+  }
+  xyTrail=xyTrail.filter(p=>(now-p.t)<1500);
+}
+
+// ══════════════════════════════════════════════════════════════
+// PLUCK PADS
+// ══════════════════════════════════════════════════════════════
+const PAD_SYNTHS={
+  'single': c=>{ getCtx(); pluck(55,0.7+Math.random()*.3); return null; },
+  'roll': c=>{
+    // Reed roll: rapid plucks
+    const baseNote=55;
+    [0,.08,.16,.24,.32,.42,.5,.6].forEach((t,i)=>{
+      setTimeout(()=>{getCtx();pluck(baseNote,0.5+Math.random()*.4);},t*1000);
+    });
+    return null;
+  },
+  'throat': c=>{
+    // Throat drone: continuous buzzing with cavity
+    const now=c.currentTime,nodes=[],master=c.createGain();master.gain.value=0;
+    master.gain.linearRampToValueAtTime(.55,now+.15);
+    const f=55;
+    // Reed
+    const osc=c.createOscillator();osc.type='sawtooth';osc.frequency.value=f;
+    const lfo=c.createOscillator();lfo.frequency.value=4.8;
+    const lG=c.createGain();lG.gain.value=4;
+    lfo.connect(lG);lG.connect(osc.frequency);
+    // Body cavity
+    const {f1,f2}=getFormants();
+    const bpf1=c.createBiquadFilter();bpf1.type='bandpass';bpf1.frequency.value=f1;bpf1.Q.value=5;
+    const bpf2=c.createBiquadFilter();bpf2.type='bandpass';bpf2.frequency.value=f2;bpf2.Q.value=7;
+    const g1=c.createGain();g1.gain.value=.6;const g2=c.createGain();g2.gain.value=.4;
+    osc.connect(bpf1);bpf1.connect(g1);g1.connect(master);
+    osc.connect(bpf2);bpf2.connect(g2);g2.connect(master);
+    osc.start(now);lfo.start(now);nodes.push(osc,lfo);
+    routeOut(c,master);
+    animateHarp();
+    return{nodes,master};
+  },
+  'overtone': c=>{
+    // Overtone climb: same reed note, mouth moves through vowels
+    const f=55;
+    const positions=[[.85,.1],[.7,.25],[.5,.4],[.35,.55],[.2,.7],[.1,.85]];
+    positions.forEach(([x,y],i)=>{
+      setTimeout(()=>{
+        xyX=x;xyY=y;
+        document.getElementById('xy-thumb').style.left=(x*100)+'%';
+        document.getElementById('xy-thumb').style.top=((1-y)*100)+'%';
+        updateXYDisplay();
+        getCtx();pluck(55,0.6+Math.random()*.3);
+      },i*250);
+    });
+    return null;
+  },
+  'vowel-sweep': c=>{
+    // Slow vowel sweep while holding the reed
+    const now=c.currentTime,nodes=[],master=c.createGain();master.gain.value=0;
+    master.gain.linearRampToValueAtTime(.5,now+.1);
+    const osc=c.createOscillator();osc.type='sawtooth';osc.frequency.value=55;
+    // Animate XY while playing
+    let t=0;
+    const sweep=setInterval(()=>{
+      t+=0.02;
+      xyX=0.5+Math.sin(t)*0.45;
+      xyY=0.5+Math.cos(t*.7)*0.4;
+      document.getElementById('xy-thumb').style.left=(xyX*100)+'%';
+      document.getElementById('xy-thumb').style.top=((1-xyY)*100)+'%';
+      updateXYDisplay();
+    },40);
+    const {f1,f2}=getFormants();
+    const bpf1=c.createBiquadFilter();bpf1.type='bandpass';bpf1.frequency.value=f1;bpf1.Q.value=5;
+    const bpf2=c.createBiquadFilter();bpf2.type='bandpass';bpf2.frequency.value=f2;bpf2.Q.value=7;
+    const g1=c.createGain();g1.gain.value=.55;const g2=c.createGain();g2.gain.value=.4;
+    osc.connect(bpf1);bpf1.connect(g1);g1.connect(master);
+    osc.connect(bpf2);bpf2.connect(g2);g2.connect(master);
+    osc.start(now);nodes.push(osc);
+    routeOut(c,master);
+    animateHarp();
+    master._sweep=sweep;
+    return{nodes,master};
+  },
+  'tremolo': c=>{
+    // Fast reed tremolo
+    [0,.05,.1,.15,.2,.25,.3,.35,.4,.45,.5,.55,.6].forEach((t,i)=>{
+      const vel=0.4+Math.random()*.45;
+      setTimeout(()=>{getCtx();pluck(55,vel);},t*1000);
+    });
+    return null;
+  },
+  'nasal': c=>{
+    // Nasal cavity resonance — high F2, tongue forward
+    xyX=0.3; xyY=0.9;
+    document.getElementById('xy-thumb').style.left=(xyX*100)+'%';
+    document.getElementById('xy-thumb').style.top=((1-xyY)*100)+'%';
+    updateXYDisplay();
+    const now=c.currentTime,nodes=[],master=c.createGain();master.gain.value=0;
+    master.gain.linearRampToValueAtTime(.45,now+.1);
+    const osc=c.createOscillator();osc.type='sawtooth';osc.frequency.value=55;
+    const nasalBpf=c.createBiquadFilter();nasalBpf.type='bandpass';
+    nasalBpf.frequency.value=2300;nasalBpf.Q.value=10;
+    const nasalG=c.createGain();nasalG.gain.value=.65;
+    const lowBpf=c.createBiquadFilter();lowBpf.type='bandpass';
+    lowBpf.frequency.value=280;lowBpf.Q.value=5;
+    const lowG=c.createGain();lowG.gain.value=.4;
+    osc.connect(nasalBpf);nasalBpf.connect(nasalG);nasalG.connect(master);
+    osc.connect(lowBpf);lowBpf.connect(lowG);lowG.connect(master);
+    osc.start(now);nodes.push(osc);
+    routeOut(c,master);
+    animateHarp();
+    return{nodes,master};
+  },
+  'ritual': c=>{
+    // Ritual pattern: rhythmic plucks with slow mouth movement
+    const pattern=[0,.18,.36,.54,.72,.9,1.1,1.3,1.5,1.7,1.9,2.1];
+    pattern.forEach((t,i)=>{
+      setTimeout(()=>{
+        xyX=0.3+Math.sin(i*.8)*.35;
+        xyY=0.2+Math.cos(i*.5)*.35;
+        document.getElementById('xy-thumb').style.left=(xyX*100)+'%';
+        document.getElementById('xy-thumb').style.top=((1-xyY)*100)+'%';
+        updateXYDisplay();
+        getCtx();pluck(55,0.5+Math.random()*.45);
+      },t*1000);
+    });
+    return null;
+  },
+};
+
+function triggerPad(padEl,sound){
+  const c=getCtx();
+  const isHold=padEl.dataset.hold==='1';
+  if(isHold&&holdNodes.has(sound)){
+    const h=holdNodes.get(sound);
+    h.master.gain.setTargetAtTime(0,c.currentTime,.3);
+    if(h.master._sweep) clearInterval(h.master._sweep);
+    setTimeout(()=>h.nodes.forEach(n=>{try{n.stop()}catch(e){}}),2000);
+    holdNodes.delete(sound);padEl.classList.remove('hold-on');
+    if(holdNodes.size===0&&activeVoices.size===0){
+      document.getElementById('harp-svg').classList.remove('vibrating');
+      document.getElementById('power-dot').classList.remove('on');
+      document.getElementById('hs-cavity').textContent='still';
+      document.getElementById('hs-cavity').className='';
+      document.getElementById('mouth-heat').classList.remove('on');
+    }
+    return;
+  }
+  const fn=PAD_SYNTHS[sound];if(!fn)return;
+  const result=fn(c);
+  if(isHold&&result){holdNodes.set(sound,result);padEl.classList.add('hold-on');}
+  padEl.classList.add('hit');clearTimeout(padEl._t);padEl._t=setTimeout(()=>padEl.classList.remove('hit'),160);
+}
+
+document.querySelectorAll('.ppad').forEach(pad=>{
+  pad.addEventListener('mousedown',e=>{e.preventDefault();getCtx();triggerPad(pad,pad.dataset.sound);});
+  pad.addEventListener('touchstart',e=>{e.preventDefault();getCtx();triggerPad(pad,pad.dataset.sound);},{passive:false});
+});
+
+// ── Keyboard ──
+const WHITE_KEYS=[0,2,4,5,7,9,11],BLACK_SLOTS=[1,3,null,6,8,10,null];
+const KB_WHITE={a:0,s:1,d:2,f:3,g:4,h:5,j:6,k:7};
+const KB_BLACK={w:0,e:1,t:3,y:4,u:5};
+const PAD_KB={q:'single',w:'roll',e:'throat',r:'overtone',a:'vowel-sweep',s:'tremolo',d:'nasal',f:'ritual'};
+const PAD_MAP={};document.querySelectorAll('.ppad').forEach(p=>{PAD_MAP[p.dataset.key]=p;});
+let kbOct=2;const OMIN=1,OMAX=5,SH=18;
+
+function buildKB(){
+  const el=document.getElementById('keyboard');el.innerHTML='';
+  const base=kbOct*12+12;
+  for(let i=0;i<8;i++){const n=base+WHITE_KEYS[i%7];const wk=document.createElement('div');wk.className='key white';wk.dataset.note=n;wk.innerHTML=`<span class="key-lbl">${'ASDFGHJK'[i]}</span>`;el.appendChild(wk);}
+  requestAnimationFrame(()=>{
+    el.querySelectorAll('.key.white').forEach((wk,i)=>{const slot=BLACK_SLOTS[i%7];if(slot==null)return;const n=base+slot;const bk=document.createElement('div');bk.className='key black';bk.dataset.note=n;bk.style.left=(wk.offsetLeft+wk.offsetWidth*.6)+'px';const lbls=['W','E','','T','Y','U',''];if(lbls[i])bk.innerHTML=`<span class="key-lbl">${lbls[i]}</span>`;el.appendChild(bk);});
+    el.querySelectorAll('.key').forEach(k=>{
+      const n=parseInt(k.dataset.note);
+      k.addEventListener('mousedown',e=>{e.preventDefault();getCtx();pluck(n,0.65+Math.random()*.35);k.classList.add('active');});
+      k.addEventListener('mouseup',()=>k.classList.remove('active'));
+      k.addEventListener('mouseleave',()=>k.classList.remove('active'));
+      k.addEventListener('touchstart',e=>{e.preventDefault();e.stopPropagation();getCtx();pluck(n,0.65+Math.random()*.35);k.classList.add('active');},{passive:false});
+      k.addEventListener('touchend',e=>{e.preventDefault();k.classList.remove('active');},{passive:false});
+    });
+  });
+}
+function buildOctWheel(){
+  const inner=document.getElementById('oct-wheel-inner');inner.innerHTML='';
+  for(let o=OMAX;o>=OMIN;o--){const s=document.createElement('div');s.className='ow-slot'+(o===kbOct?' cur':'');s.textContent='C'+o;s.dataset.oct=o;inner.appendChild(s);}
+  scrollOW();
+}
+function scrollOW(){
+  const inner=document.getElementById('oct-wheel-inner');const wH=document.getElementById('oct-wheel').clientHeight||78;
+  inner.style.transform=`translateY(${wH/2-SH/2-(OMAX-kbOct)*SH}px)`;
+  inner.querySelectorAll('.ow-slot').forEach(s=>s.classList.toggle('cur',parseInt(s.dataset.oct)===kbOct));
+}
+(function(){const wh=document.getElementById('oct-wheel');let sy=null,so=null;wh.addEventListener('mousedown',e=>{sy=e.clientY;so=kbOct;e.preventDefault();});document.addEventListener('mousemove',e=>{if(sy===null)return;const d=Math.round((sy-e.clientY)/SH);const n=Math.max(OMIN,Math.min(OMAX,so+d));if(n!==kbOct){kbOct=n;scrollOW();buildKB();}});document.addEventListener('mouseup',()=>{sy=null;});wh.addEventListener('wheel',e=>{e.preventDefault();kbOct=Math.max(OMIN,Math.min(OMAX,kbOct+(e.deltaY>0?-1:1)));scrollOW();buildKB();},{passive:false});wh.addEventListener('click',e=>{const s=e.target.closest('.ow-slot');if(s){kbOct=parseInt(s.dataset.oct);scrollOW();buildKB();}});})();
+
+document.addEventListener('keydown',e=>{
+  if(e.repeat||e.target.tagName==='INPUT')return;
+  const key=e.key.toLowerCase();
+  if(key==='z'){kbOct=Math.max(OMIN,kbOct-1);scrollOW();buildKB();return;}
+  if(key==='x'){kbOct=Math.min(OMAX,kbOct+1);scrollOW();buildKB();return;}
+  if(PAD_KB[key]&&PAD_MAP[key]){getCtx();triggerPad(PAD_MAP[key],PAD_KB[key]);return;}
+  const base=kbOct*12+12;let n=null;
+  if(KB_WHITE[key]!==undefined)n=base+WHITE_KEYS[KB_WHITE[key]];
+  else if(KB_BLACK[key]!==undefined){const s=BLACK_SLOTS[KB_BLACK[key]];if(s!=null)n=base+s;}
+  if(n!==null){getCtx();pluck(n,0.65+Math.random()*.35);document.getElementById('keyboard')?.querySelectorAll('.key').forEach(k=>{if(parseInt(k.dataset.note)===n)k.classList.add('active');});}
+});
+document.addEventListener('keyup',()=>{
+  document.getElementById('keyboard')?.querySelectorAll('.key.active').forEach(k=>k.classList.remove('active'));
+});
+
+// ── Panel buttons ──
+document.querySelectorAll('[data-reed]').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('[data-reed]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');P.reed=btn.dataset.reed;});});
+
+// ── Knobs ──
+function setupKnobs(){
+  document.querySelectorAll('canvas.knob').forEach(canvas=>{
+    const id=canvas.id,min=parseFloat(canvas.dataset.min),max=parseFloat(canvas.dataset.max);
+    let val=parseFloat(canvas.dataset.val);const color=canvas.dataset.color||'#a8a8c0';
+    const valEl=document.getElementById('v-'+id.replace('k-',''));if(!valEl)return;
+    function draw(){
+      const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,cx=w/2,cy=h/2,r=w*.38;
+      ctx.clearRect(0,0,w,h);
+      const sA=Math.PI*.75,eA=Math.PI*2.25,t=(val-min)/(max-min),cA=sA+t*(eA-sA);
+      ctx.beginPath();ctx.arc(cx,cy,r,sA,eA);ctx.strokeStyle='rgba(168,168,192,.1)';ctx.lineWidth=3;ctx.lineCap='round';ctx.stroke();
+      ctx.beginPath();ctx.arc(cx,cy,r,sA,cA);ctx.strokeStyle=color;ctx.lineWidth=3;ctx.shadowColor=color;ctx.shadowBlur=5;ctx.stroke();ctx.shadowBlur=0;
+      const dx=cx+r*Math.cos(cA),dy=cy+r*Math.sin(cA);
+      ctx.beginPath();ctx.arc(dx,dy,2.5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fillStyle='#07050c';ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy,1.5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+    }
+    let dragY=null,dragVal=null;
+    canvas.addEventListener('mousedown',e=>{dragY=e.clientY;dragVal=val;e.preventDefault();});
+    document.addEventListener('mousemove',e=>{if(dragY===null)return;val=Math.max(min,Math.min(max,dragVal+(dragY-e.clientY)*(max-min)/130));draw();onKnob(id,val,valEl);});
+    document.addEventListener('mouseup',()=>{dragY=null;});
+    draw();onKnob(id,val,valEl);
+  });
+}
+function onKnob(id,val,el){
+  const vt=val.toFixed(2);
+  const map={
+    'k-reverb':   v=>{P.reverb=v;   el.textContent=vt;},
+    'k-cavity':   v=>{P.cavity=v;   el.textContent=vt;},
+    'k-decay':    v=>{P.decay=v;    el.textContent=vt;},
+    'k-jaw':      v=>{P.jaw=v;      el.textContent=vt; xyX=v; document.getElementById('xy-thumb').style.left=(v*100)+'%'; updateXYDisplay();},
+    'k-bright':   v=>{P.bright=v;   el.textContent=vt;},
+    'k-sub':      v=>{P.sub=v;      el.textContent=vt;},
+    'k-overtone': v=>{P.overtone=v; el.textContent=vt;},
+    'k-growl':    v=>{P.growl=v;    el.textContent=vt;},
+    'k-width':    v=>{P.width=v;    el.textContent=vt;},
+  };
+  if(map[id])map[id](val);
+}
+
+// ── Waveform ──
+const waveCanvas=document.getElementById('wave-canvas');
+const wCtx=waveCanvas.getContext('2d');
+function resizeWave(){waveCanvas.width=waveCanvas.offsetWidth;waveCanvas.height=waveCanvas.offsetHeight;}
+function drawWave(){
+  requestAnimationFrame(drawWave);
+  const W=waveCanvas.width,H=waveCanvas.height;
+  wCtx.clearRect(0,0,W,H);
+  if(!analyser)return;
+  const buf=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(buf);
+  const grad=wCtx.createLinearGradient(0,0,W,0);
+  grad.addColorStop(0,'rgba(168,168,192,.0)');
+  grad.addColorStop(.15,'rgba(168,168,192,.55)');
+  grad.addColorStop(.4,'rgba(216,216,232,.6)');
+  grad.addColorStop(.65,'rgba(200,80,30,.5)');
+  grad.addColorStop(.85,'rgba(168,168,192,.4)');
+  grad.addColorStop(1,'rgba(168,168,192,.0)');
+  wCtx.strokeStyle=grad;wCtx.lineWidth=1.4;
+  wCtx.shadowColor='rgba(168,168,192,.3)';wCtx.shadowBlur=5;
+  wCtx.beginPath();
+  const step=W/buf.length;
+  for(let i=0;i<buf.length;i++){const x=i*step,y=(buf[i]/128-1)*(H*.44)+H/2;i===0?wCtx.moveTo(x,y):wCtx.lineTo(x,y);}
+  wCtx.stroke();wCtx.shadowBlur=0;
+}
+
+// ── Background: ancient stone wall texture ──
+const bgCanvas=document.getElementById('bg');
+const bgCtx=bgCanvas.getContext('2d');
+let bgT=0,bgDust=[];
+function initBG(){
+  bgCanvas.width=window.innerWidth;bgCanvas.height=window.innerHeight;
+  bgDust=Array.from({length:35},()=>({
+    x:Math.random()*bgCanvas.width,y:Math.random()*bgCanvas.height,
+    r:Math.random()*.8+.1,sp:Math.random()*.04+.005,
+    o:Math.random()*.06+.01,t:Math.random()*Math.PI*2,
+    drift:(Math.random()-.5)*.2,
+  }));
+}
+function drawBG(){
+  requestAnimationFrame(drawBG);
+  const W=bgCanvas.width,H=bgCanvas.height;
+  bgCtx.clearRect(0,0,W,H);
+  bgT+=.004;
+  const bg=bgCtx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#030208');bg.addColorStop(.4,'#07050c');bg.addColorStop(1,'#090610');
+  bgCtx.fillStyle=bg;bgCtx.fillRect(0,0,W,H);
+  // Dust motes (ancient room)
+  bgDust.forEach(p=>{
+    p.t+=p.sp;p.x+=p.drift+Math.sin(p.t*.4)*.15;p.y-=p.sp*.12;
+    if(p.y<-4){p.y=H+4;p.x=Math.random()*W;}
+    const fl=p.o*(0.5+0.5*Math.sin(p.t*1.8));
+    bgCtx.beginPath();bgCtx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    bgCtx.fillStyle=`rgba(180,175,200,${fl})`;bgCtx.fill();
+  });
+  // Faint mouth-warmth glow in center
+  const mg=bgCtx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,W*.3);
+  mg.addColorStop(0,`rgba(180,60,20,${.012+.008*Math.sin(bgT*.5)})`);
+  mg.addColorStop(1,'rgba(180,60,20,0)');
+  bgCtx.fillStyle=mg;bgCtx.fillRect(0,0,W,H);
+}
+
+const cursor=document.getElementById('cursor');
+document.addEventListener('mousemove',e=>{cursor.style.left=e.clientX+'px';cursor.style.top=e.clientY+'px';});
+window.addEventListener('resize',()=>{resizeWave();resizeXY();initBG();});
+
+setupKnobs();
+resizeWave();resizeXY();initBG();drawBG();drawWave();drawXYCanvas();
+buildKB();buildOctWheel();
+updateXYDisplay();
+</script>
+</body>
+</html>vvvvvvvvvvvvvvvvvvvvvvvvv
